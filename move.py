@@ -68,10 +68,7 @@ class POI:
 
         # Elementary School Students Restriction
         if self.name[len(self.name) - 2: len(self.name)] == 'Es' and person.age >= 5 and person.age <= 10:
-            if person.original_dwell_time is None: # Check if this is the student's first time
-                person.original_dwell_time = 300
-            else:
-                random_integer = person.original_dwell_time
+            random_integer = 300
                 
 
         if random_integer > len(self.current_people):
@@ -80,49 +77,46 @@ class POI:
             self.current_people[random_integer - 1].append(person)
 
     def send_person(self, person, poi_dict):
+        # print(self.same_day_brands)
+        instate_sum = 0
+        next_poi_count = 1  # bc outstate is already a part of next poi list
+        outstate_sum = 0
+        outstate_count = 0
+        home_constant = 2
         next_poi_list = []
-        next_poi_weights = []
-        next_poi_sum = 0
-        next_poi_count = 0
-        
-        # if self.name[len(self.name) - 2:len(self.name)] == 'Es' and person.age >= 5 and person.age <= 10:
-        #     return person, "American Heritage Bank"
 
         for brand_name in self.same_day_brands.keys():
             if brand_name in poi_dict.keys():
-                next_poi_sum += self.same_day_brands[brand_name]
+                instate_sum += self.same_day_brands[brand_name]
                 next_poi_count += 1
                 next_poi_list.append(brand_name)
             else:
-                random_poi = random.choice(list(poi_dict.keys()))
-                while random_poi in next_poi_list: # Get a ramdom_poi until we find that is not in the current next_poi_list. # There is one thing to be careful about: if there is a POI that has all of the pois as its potential next poi, it may cause problem.
-                    random_poi = random.choice(list(poi_dict.keys()))
-                next_poi_sum += 1 # Let's assume that if there is no matching between same_day_brand and poi_dict, just one person randomly goes to any place in poi_dict
-                next_poi_count += 1
-                next_poi_list.append(random_poi) # append a random poi that is not in the current list because I do not want to include the out-state situations anymore.
-                break
+                outstate_sum += self.same_day_brands[brand_name]
+                outstate_count += 1
 
-        # Append weights to each pois
-        for brand_name in next_poi_list:
-            if brand_name in self.same_day_brands.keys():
-                next_poi_weights.append(self.same_day_brands[brand_name])
-            else:
-                next_poi_weights.append(1)
+        outstate_avg = outstate_sum / outstate_count if outstate_count != 0 else 1
+        next_poi_sum = outstate_avg + instate_sum
+        home_weight = next_poi_sum / next_poi_count if next_poi_count != 0 else 1
+        home_weight_modified = home_weight / home_constant
 
-        # Calculate the average of next_poi_sum to use that as the weight of 'home'
-        avg_before_putting_home = next_poi_sum / next_poi_count if next_poi_count != 0 else 1
-
-        # Append 'home' to next_poi_list
+        next_poi_list.append("out of state")
         next_poi_list.append("home")
 
-        # Append 'home' weight
-        next_poi_weights.append(avg_before_putting_home)
+        # next_poi_list = ['Dollar General', 'out of state', 'home']
+        # final total sum
+        next_poi_sum += home_weight_modified
+        next_poi_weights = []
+        for brand_name in next_poi_list:
+            if brand_name in poi_dict.keys():
+                next_poi_weights.append(
+                    self.same_day_brands[brand_name] / next_poi_sum)
+            else:
+                continue
 
-        # Pick a next potential destination
+        next_poi_weights.append(outstate_avg / next_poi_sum)
+        next_poi_weights.append(home_weight_modified / next_poi_sum)
+
         next_poi = random.choices(next_poi_list, weights=next_poi_weights)[0]
-
-        if self.name[len(self.name) - 2:len(self.name)] == 'Es' and person.age >= 5 and person.age <= 10:
-            person.school_attended_today = True
 
         return [person, next_poi]
 
@@ -135,22 +129,15 @@ def timestep(poi_dict, hh_dict, popularity_matrix):
     '''
         Releasing people from households TODO: categorize people
     '''
+
     for hh in hh_dict.keys():
         cur_hh = hh_dict[hh]
         for person in cur_hh.population:
-            if person.age >= 5 and person.age <= 10 and not person.school_attended_today and random.choices([True, False], [9, 1])[0]:
-                target_poi = ""
-                for poi in popularity_matrix[0]:
-                    if poi[-2:] == "Es":
-                        target_poi = poi
+            if random.choices([True, False], [1, 10])[0]:
+                target_poi = random.choices(
+                    popularity_matrix[0], popularity_matrix[1])[0]
                 poi_dict[target_poi].add_person(person)
                 cur_hh.population.remove(person)
-                # Think about what if there is no Es.
-            else:
-                if random.choices([True, False], [1, 10])[0]:
-                    target_poi = random.choices(popularity_matrix[0], popularity_matrix[1])[0]
-                    poi_dict[target_poi].add_person(person)
-                    cur_hh.population.remove(person)
 
     '''
         Movement of people in each timestep
@@ -165,6 +152,8 @@ def timestep(poi_dict, hh_dict, popularity_matrix):
         for person in popped_people:
             person, target = cur_poi.send_person(person, poi_dict)
             if target == "home":
+                person.household.add_member(person)
+            elif target == "out of state":
                 person.household.add_member(person)
             else:
                 poi_dict[target].add_person(person)

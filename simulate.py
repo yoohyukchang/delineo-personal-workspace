@@ -110,21 +110,7 @@ class POI():
 
         next_poi = random.choices(next_poi_list, weights=next_poi_weights)[0]
 
-        # print(instate_sum)
-        # print(outstate_count)
-        # print(outstate_sum)
-        # print(next_poi_count)
-        # print(next_poi_sum)
-        # print(home_weight_modified)
-        # print(next_poi_list)
-        # print(next_poi_weights)
-        # print(next_poi)
-
         return [person, next_poi]
-
-    # def move_time_step():
-
-    # def toString?
 
 
 def timestep(poi_dict, hh_dict, popularity_matrix):

@@ -24,7 +24,6 @@ class Person:
         self.cbg = cbg
         self.infected = False
         self.household = household
-        self.original_dwell_time = None
         self.school_attended_today = False
 
 class Population:
