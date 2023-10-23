@@ -95,7 +95,7 @@ class POI:
                 next_poi_list.append(brand_name)
             else:
                 random_poi = random.choice(list(poi_dict.keys()))
-                while random_poi in next_poi_list: # Get a ramdom_poi until we find that is not in the current next_poi_list. # There is one thing to be careful about, if there is a POI that has all the pois as its potential poi, may cause problem.
+                while random_poi in next_poi_list: # Get a ramdom_poi until we find that is not in the current next_poi_list. # There is one thing to be careful about: if there is a POI that has all of the pois as its potential next poi, it may cause problem.
                     random_poi = random.choice(list(poi_dict.keys()))
                 next_poi_sum += 1 # Let's assume that if there is no matching between same_day_brand and poi_dict, just one person randomly goes to any place in poi_dict
                 next_poi_count += 1
