@@ -71,6 +71,10 @@ class POI:
             person.school_attended_today = True
             random_integer = random.randint(300, 400)
 
+        # TODO: Uptown Pizza restriction
+        if self.name == "Uptown Pizza":
+            return
+
         if random_integer > len(self.current_people):
             self.current_people.append(deque())
         else:
@@ -118,10 +122,6 @@ class POI:
 
         next_poi = random.choices(next_poi_list, weights=next_poi_weights)[0]
 
-        # TODO: DELETE
-        if person.age >= 5 and person.age <= 10:
-            print(person.age, next_poi)
-
         return [person, next_poi]
 
 
@@ -145,7 +145,11 @@ def timestep(poi_dict, hh_dict, popularity_matrix):
                     poi_dict[target_poi].add_person(person)
                     cur_hh.population.remove(person)
                 else:
+                    # If a student type Person reached here, it means they already went to the school.
                     target_poi = random.choices(popularity_matrix[0], popularity_matrix[1])[0]
+                    if person.age >= 5 and person.age <= 10:
+                        while target_poi == "Barnsdall Es" :
+                            target_poi = random.choices(popularity_matrix[0], popularity_matrix[1])[0]
                     poi_dict[target_poi].add_person(person)
                     cur_hh.population.remove(person)
 
@@ -161,11 +165,6 @@ def timestep(poi_dict, hh_dict, popularity_matrix):
 
         for person in popped_people:
             person, target = cur_poi.send_person(person, poi_dict)
-            # if self.name[len(self.name) - 2: len(self.name)] == 'Es' and person.age >= 5 and person.age <= 10:
-            # if poi == "Barnsdall Es":
-            #     print(person.age, target)
-            if person.age <= 10 and person.age >= 5:
-                target = "home"
             if target == "home":
                 person.household.add_member(person)
             elif target == "out of state":
