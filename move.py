@@ -68,8 +68,8 @@ class POI:
 
         # Elementary School Students Restriction
         if self.name[len(self.name) - 2: len(self.name)] == 'Es' and person.age >= 5 and person.age <= 10:
-            random_integer = 300
-                
+            person.school_attended_today = True
+            random_integer = random.randint(300, 400)
 
         if random_integer > len(self.current_people):
             self.current_people.append(deque())
@@ -118,6 +118,10 @@ class POI:
 
         next_poi = random.choices(next_poi_list, weights=next_poi_weights)[0]
 
+        # TODO: DELETE
+        if person.age >= 5 and person.age <= 10:
+            print(person.age, next_poi)
+
         return [person, next_poi]
 
 
@@ -134,10 +138,16 @@ def timestep(poi_dict, hh_dict, popularity_matrix):
         cur_hh = hh_dict[hh]
         for person in cur_hh.population:
             if random.choices([True, False], [1, 10])[0]:
-                target_poi = random.choices(
-                    popularity_matrix[0], popularity_matrix[1])[0]
-                poi_dict[target_poi].add_person(person)
-                cur_hh.population.remove(person)
+                target_poi = ""
+                # Fixed students being sent to other POIs after timestamp 300.
+                if person.age >= 5 and person.age <= 10 and person.school_attended_today == False :
+                    target_poi = "Barnsdall Es"
+                    poi_dict[target_poi].add_person(person)
+                    cur_hh.population.remove(person)
+                else:
+                    target_poi = random.choices(popularity_matrix[0], popularity_matrix[1])[0]
+                    poi_dict[target_poi].add_person(person)
+                    cur_hh.population.remove(person)
 
     '''
         Movement of people in each timestep
@@ -151,6 +161,11 @@ def timestep(poi_dict, hh_dict, popularity_matrix):
 
         for person in popped_people:
             person, target = cur_poi.send_person(person, poi_dict)
+            # if self.name[len(self.name) - 2: len(self.name)] == 'Es' and person.age >= 5 and person.age <= 10:
+            # if poi == "Barnsdall Es":
+            #     print(person.age, target)
+            if person.age <= 10 and person.age >= 5:
+                target = "home"
             if target == "home":
                 person.household.add_member(person)
             elif target == "out of state":
@@ -159,7 +174,6 @@ def timestep(poi_dict, hh_dict, popularity_matrix):
                 poi_dict[target].add_person(person)
 
     return poi_dict, hh_dict
-
 
 def get_info(city_info):
 
