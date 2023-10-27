@@ -2,3 +2,4 @@
 *.json
 __pycache__/
 safegraph_data
+.DS_Store
