@@ -7,6 +7,16 @@ import random
 from household import Household, Person, Population
 import sys
 
+# The number of staff at the American Heritage Bank TODO: I think we can get the number of staff by dividing the raw_visit_counts by like a factor of 3 or something.
+# For now, I will just set it to 3.
+tot_num_staff_AHB = 3
+cur_num_staff_AHB = 0
+# The list of staff at the American Heritage Bank (will get the Person objects)
+staff_list_AHB = []
+
+# TODO! This part should be deleted! This is only for the demonstration of which people are working as staff at AHB
+temp_list_staff_AHB = []
+
 
 class Household:
 
@@ -49,8 +59,11 @@ class POI:
         weights = [self.bucketed_dwell_time["<5"]/sum, self.bucketed_dwell_time["5-10"]/sum, self.bucketed_dwell_time["11-20"]/sum,
                    self.bucketed_dwell_time["21-60"]/sum, self.bucketed_dwell_time["61-120"]/sum, self.bucketed_dwell_time["121-240"]/sum, self.bucketed_dwell_time[">240"]/sum]
         
-
+        # Set the maximum timestep
+        MAX_TIMESTEP = 500
+        
         random_string = random.choices(values, weights=weights)[0]
+
         if (random_string == "<5"):
             random_integer = random.randint(1, 4)
         elif (random_string == "5-10"):
@@ -64,16 +77,21 @@ class POI:
         elif (random_string == "121-240"):
             random_integer = random.randint(121, 240)
         elif (random_string == ">240"):
-            random_integer = random.randint(241, 500)
+            random_integer = random.randint(241, MAX_TIMESTEP)
 
         # Elementary School Students Restriction
         if self.name[len(self.name) - 2: len(self.name)] == 'Es' and person.age >= 5 and person.age <= 10:
             person.school_attended_today = True
             random_integer = random.randint(300, 400)
 
-        # TODO: Uptown Pizza restriction
-        if self.name == "Uptown Pizza":
-            return
+        # American Heritage Bank Restriction (POI Staff Restriction).
+        # Let's assume the staff work 500 minutes (which is the max timestep we set right now).
+        while self.name == "American Heritage Bank" and person in staff_list_AHB:
+            random_integer = MAX_TIMESTEP
+            staff_list_AHB.remove(person)
+            # TODO! This part should be deleted + all the related parts. This is solely for the demonstration of showing which people are the staff.
+            # TODO! Delete the temp_list_staff_AHB in the global field as well.
+            temp_list_staff_AHB.append(person)
 
         if random_integer > len(self.current_people):
             self.current_people.append(deque())
@@ -131,7 +149,7 @@ def timestep(poi_dict, hh_dict, popularity_matrix):
     '''
 
     '''
-        Releasing people from households TODO: categorize people
+        Releasing people from households
     '''
 
     for hh in hh_dict.keys():
@@ -139,17 +157,26 @@ def timestep(poi_dict, hh_dict, popularity_matrix):
         for person in cur_hh.population:
             if random.choices([True, False], [1, 10])[0]:
                 target_poi = ""
-                # Fixed students being sent to other POIs after timestamp 300.
+                # This is the restriction of the students (age between 5 to 10) are sent to school from home
                 if person.age >= 5 and person.age <= 10 and person.school_attended_today == False :
                     target_poi = "Barnsdall Es"
                     poi_dict[target_poi].add_person(person)
                     cur_hh.population.remove(person)
                 else:
-                    # If a student type Person reached here, it means they already went to the school.
                     target_poi = random.choices(popularity_matrix[0], popularity_matrix[1])[0]
+                    # If a student type Person (age between 5 and 10) reached here, it means they already went to the school.
+                    # So let's find a target_poi until it is not Barnsdall Es because it is unrealistic to go back to the school again.
                     if person.age >= 5 and person.age <= 10:
                         while target_poi == "Barnsdall Es" :
                             target_poi = random.choices(popularity_matrix[0], popularity_matrix[1])[0]
+                    # Restriction for American Heritage Bank
+                    # We save 3 people of age between 20 and 40 and put it in the global list to track them anywhere in the program
+                    # In the add_person or send_peson, since we have their IDs, we can easily put restriciton on them.
+                    global cur_num_staff_AHB
+                    if person.age >= 20 and person.age <= 50 and target_poi == "American Heritage Bank" and cur_num_staff_AHB < tot_num_staff_AHB and person not in staff_list_AHB:
+                        staff_list_AHB.append(person)
+                        cur_num_staff_AHB += 1
+                    # Add the person into the POI and remove from their homes because they are now not in their homes.
                     poi_dict[target_poi].add_person(person)
                     cur_hh.population.remove(person)
 
@@ -351,6 +378,12 @@ if __name__ == "__main__":
         for hh in list_hh:
             hh_info.append(hh)
 
-    print(len(hh_info))
-
     simulation(settings, city_info, hh_info)
+
+# Checking who is in the staff_list_AHB.
+print("")
+print("--------------- This is to check which people are in the AHB as staff ---------------")
+print(temp_list_staff_AHB)
+print("age: " + str(temp_list_staff_AHB[0].age), "id: " + str(temp_list_staff_AHB[0].id))
+print("age: " + str(temp_list_staff_AHB[1].age), "id: " + str(temp_list_staff_AHB[1].id))
+print("age: " + str(temp_list_staff_AHB[2].age), "id: " + str(temp_list_staff_AHB[2].id))
