@@ -19,7 +19,7 @@ class Person:
 
     def __init__(self, id, sex, age, cbg, household):
         self.id = id
-        self.sex = sex #male 0 female 1
+        self.sex = sex # male 0 female 1
         self.age = age
         self.cbg = cbg
         self.infected = False

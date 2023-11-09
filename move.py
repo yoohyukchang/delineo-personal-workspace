@@ -339,10 +339,10 @@ def simulation(settings, city_info, hh_info):
                 poi_count += 1
             poi_return_dict[f'timestep_{time}'] = poi_ret
 
-    with open("result_hh.json", "w+") as hhstream:
+    with open("results_data/result_hh.json", "w+") as hhstream:
         json.dump(hh_return_dict, hhstream)
 
-    with open("result_poi.json", "w+") as poistream:
+    with open("results_data/result_poi.json", "w+") as poistream:
         json.dump(poi_return_dict, poistream)
 
 
@@ -350,10 +350,10 @@ if __name__ == "__main__":
 
     print("main function loading")
 
-    with open('simul_settings.yaml', mode="r") as settingstream:
+    with open('util_data/simul_settings.yaml', mode="r") as settingstream:
         settings = yaml.full_load(settingstream)
 
-    with open('barnsdall.yaml') as citystream:
+    with open('util_data/barnsdall.yaml') as citystream:
         city_info = yaml.full_load(citystream)
 
     # Define a custom constructor for loading Person objects
@@ -369,7 +369,7 @@ if __name__ == "__main__":
     yaml.SafeLoader.add_constructor('tag:yaml.org,2002:python/object:__main__.Person', person_constructor)
     yaml.SafeLoader.add_constructor('tag:yaml.org,2002:python/object:__main__.Household', household_constructor)
 
-    with open('households.yaml', 'r') as hhstream:
+    with open('util_data/households.yaml', 'r') as hhstream:
         hh_info_pre = yaml.load(hhstream, Loader=yaml.SafeLoader)
     
     hh_info = []

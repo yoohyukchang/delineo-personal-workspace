@@ -1,5 +1,5 @@
-*.txt
-*.json
 __pycache__/
 safegraph_data
+results_data
+util_data
 .DS_Store

@@ -22,7 +22,7 @@ for timestep in poi_deque_movement:
         poi_deque_movement[timestep][poi] = new_list
 
 
-with open('movement_patterns_between_pois.json', 'w') as file:
+with open('results_data/movement_patterns_between_pois.json', 'w') as file:
     json.dump(poi_deque_movement, file)
 
-print("movement patterns between POIs result file created.")
+print("movement_patterns_between_pois result file created: SUCCESS!")
