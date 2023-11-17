@@ -4,7 +4,7 @@
 
 import json
 
-with open('result_poi.json', 'r') as file:
+with open('results_data/result_poi.json', 'r') as file:
     poi_deque_movement = json.load(file)
 
 
