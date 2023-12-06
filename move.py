@@ -39,7 +39,7 @@ class Household:
 
 class POI:
 
-    def __init__(self, name, visit, bucket, same_day, pop_hr, pop_day): 
+    def __init__(self, name, visit, bucket, same_day, pop_hr, pop_day, naics_code): 
         bucket = json.loads(bucket)
         self.name = name
         temp_queue = [[] for i in range(500)]
@@ -49,6 +49,7 @@ class POI:
         self.same_day_brands = same_day
         self.pop_hr = pop_hr
         self.pop_day = pop_day
+        self.naics_code = naics_code # TODO! CHANGED!
 
     def add_person(self, person):
         values = ["<5", "5-10", "11-20", "21-60", "61-120", "121-240", ">240"]
@@ -80,13 +81,17 @@ class POI:
             random_integer = random.randint(241, MAX_TIMESTEP)
 
         # Elementary School Students Restriction
-        if self.name[len(self.name) - 2: len(self.name)] == 'Es' and person.age >= 5 and person.age <= 10:
+        # if self.name[len(self.name) - 2: len(self.name)] == 'Es' and person.age >= 5 and person.age <= 10:
+        # TODO! CHANGED!
+        if self.naics_code == 611110 and person.age >= 5 and person.age <= 10:
             person.school_attended_today = True
             random_integer = random.randint(300, 400)
 
         # American Heritage Bank Restriction (POI Staff Restriction).
         # Let's assume the staff work 500 minutes (which is the max timestep we set right now).
-        while self.name == "American Heritage Bank" and person in staff_list_AHB:
+        # while self.name == "American Heritage Bank" and person in staff_list_AHB:
+        # TODO! CHANGED!
+        while self.naics_code == 522110 and person in staff_list_AHB:
             random_integer = MAX_TIMESTEP
             staff_list_AHB.remove(person)
             # TODO! This part should be deleted + all the related parts. This is solely for the demonstration of showing which people are the staff.
@@ -99,7 +104,6 @@ class POI:
             self.current_people[random_integer - 1].append(person)
 
     def send_person(self, person, poi_dict):
-        # print(self.same_day_brands)
         instate_sum = 0
         next_poi_count = 1  # bc outstate is already a part of next poi list
         outstate_sum = 0
@@ -143,7 +147,7 @@ class POI:
         return [person, next_poi]
 
 
-def timestep(poi_dict, hh_dict, popularity_matrix):
+def timestep(poi_dict, hh_dict, popularity_matrix, naics_by_brand):
     '''
         Calculates Each Timestep
     '''
@@ -151,23 +155,41 @@ def timestep(poi_dict, hh_dict, popularity_matrix):
     '''
         Releasing people from households
     '''
+    
+    # made a new dictionary that maps each current available POIs in the town with the corresponding NAICS code.
+    curr_poi_naics_dict = {}
+    for poi, poi_object in poi_dict.items():
+        if poi in naics_by_brand:
+            curr_poi_naics_dict[poi] = naics_by_brand[poi]
+        else:
+            curr_poi_naics_dict[poi] = 000000
 
     for hh in hh_dict.keys():
         cur_hh = hh_dict[hh]
         for person in cur_hh.population:
             if random.choices([True, False], [1, 10])[0]:
                 target_poi = ""
-                # This is the restriction of the students (age between 5 to 10) are sent to school from home
-                if person.age >= 5 and person.age <= 10 and person.school_attended_today == False :
-                    target_poi = "Barnsdall Es"
-                    poi_dict[target_poi].add_person(person)
-                    cur_hh.population.remove(person)
+                # If the person is an elementary school student (age 5 to 10) and did not attend school yet
+                # Generalization of restriction according to NAICS code. (elementary school)
+                if person.age >= 5 and person.age <= 10 and person.school_attended_today == False:
+                    # find a poi that has the naics code of '611110' because it's an elementary school
+                    elementary_schools_list = []
+                    for poi, naics in naics_by_brand.items():
+                        if naics == 611110 and poi in poi_dict:
+                            elementary_schools_list.append(poi)
+                    if elementary_schools_list:
+                        selected_elementary_school = random.choice(elementary_schools_list)
+                        target_poi = selected_elementary_school
+                        poi_dict[target_poi].add_person(person)
+                        cur_hh.population.remove(person)
                 else:
                     target_poi = random.choices(popularity_matrix[0], popularity_matrix[1])[0]
                     # If a student type Person (age between 5 and 10) reached here, it means they already went to the school.
                     # So let's find a target_poi until it is not Barnsdall Es because it is unrealistic to go back to the school again.
                     if person.age >= 5 and person.age <= 10:
-                        while target_poi == "Barnsdall Es" :
+                        # while target_poi == "Barnsdall Es" :
+                        # TODO! FIXED! Generalized already-attended es students to not go to school again.
+                        while curr_poi_naics_dict[target_poi] == 611110:
                             target_poi = random.choices(popularity_matrix[0], popularity_matrix[1])[0]
                     # Restriction for American Heritage Bank
                     # We save 3 people of age between 20 and 40 and put it in the global list to track them anywhere in the program
@@ -212,10 +234,21 @@ def get_info(city_info):
         pop_hr = city_info[poi_name]['popularity_by_hour']
         pop_day = city_info[poi_name]['popularity_by_day']
 
-        cur_poi = POI(poi_name, visit, bucket, same_day, pop_hr, pop_day)
+        # Get NAICS code attribute from 'naics_by_brand.json'.
+        # naics_by_brand is a dict where, key is the brand name and the value is the naics code.
+        with open('util_data/naics_by_brand.json', 'r') as infile:
+            naics_by_brand = json.load(infile)
+
+        if poi_name in naics_by_brand:
+            naics_code = naics_by_brand[poi_name]
+        else:
+            # naics code of 000000 indicates that we did not find such a brand in the data file in our code.
+            naics_code = 000000
+
+        cur_poi = POI(poi_name, visit, bucket, same_day, pop_hr, pop_day, naics_code)
         poi_dict[poi_name] = cur_poi
 
-    return poi_dict
+    return poi_dict, naics_by_brand
 
 
 def get_hh_info(hh_info):
@@ -242,7 +275,7 @@ def simulation(settings, city_info, hh_info):
 
     time = 0
 
-    poi_dict = get_info(city_info)
+    poi_dict, naics_by_brand = get_info(city_info)
     hh_dict = get_hh_info(hh_info)
 
     hh_return_dict = {}
@@ -252,7 +285,7 @@ def simulation(settings, city_info, hh_info):
 
     for i in range(settings['time']):
         print("timestep" + str(time))
-        poi_dict, hh_dict = timestep(poi_dict, hh_dict, popularity_matrix)
+        poi_dict, hh_dict = timestep(poi_dict, hh_dict, popularity_matrix, naics_by_brand)
         time += 1
 
         # Print info!
@@ -353,7 +386,10 @@ if __name__ == "__main__":
     with open('util_data/simul_settings.yaml', mode="r") as settingstream:
         settings = yaml.full_load(settingstream)
 
-    with open('util_data/barnsdall.yaml') as citystream:
+    # TODO: FIXED to using settings["city"]
+    # with open('util_data/barnsdall.yaml') as citystream:
+    # with open('Barnsdall.yaml') as citystream:
+    with open('util_data/' + settings['city'] + '.yaml') as citystream:    
         city_info = yaml.full_load(citystream)
 
     # Define a custom constructor for loading Person objects
@@ -381,9 +417,9 @@ if __name__ == "__main__":
     simulation(settings, city_info, hh_info)
 
 # Checking who is in the staff_list_AHB.
-print("")
-print("--------------- This is to check which people are in the AHB as staff ---------------")
-print(temp_list_staff_AHB)
-print("age: " + str(temp_list_staff_AHB[0].age), "id: " + str(temp_list_staff_AHB[0].id))
-print("age: " + str(temp_list_staff_AHB[1].age), "id: " + str(temp_list_staff_AHB[1].id))
-print("age: " + str(temp_list_staff_AHB[2].age), "id: " + str(temp_list_staff_AHB[2].id))
+# print("")
+# print("--------------- This is to check which people are in the AHB as staff ---------------")
+# print(temp_list_staff_AHB)
+# print("age: " + str(temp_list_staff_AHB[0].age), "id: " + str(temp_list_staff_AHB[0].id))
+# print("age: " + str(temp_list_staff_AHB[1].age), "id: " + str(temp_list_staff_AHB[1].id))
+# print("age: " + str(temp_list_staff_AHB[2].age), "id: " + str(temp_list_staff_AHB[2].id))
