@@ -221,6 +221,17 @@ def timestep(poi_dict, hh_dict, popularity_matrix, naics_by_brand):
             else:
                 poi_dict[target].add_person(person)
 
+    '''
+        Movement of people around households
+    '''
+    # TODO!!!!!!!
+    for hh in hh_dict.keys():
+        cur_hh = hh_dict[hh]
+        for person in cur_hh.population:
+            if random.choices([True, False], [1, 10])[0]:
+                
+        
+
     return poi_dict, hh_dict
 
 def get_info(city_info):
